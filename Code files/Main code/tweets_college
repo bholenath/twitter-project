@@ -1,0 +1,381 @@
+from tweepy import Stream
+from tweepy import Cursor
+from tweepy import TweepError
+from tweepy import OAuthHandler
+from tweepy.streaming import StreamListener
+from tweepy.api import API
+from time import gmtime,strftime
+import time
+import MySQLdb
+import unicodedata
+#import itertools
+#import traceback
+#import sys
+
+ckey = 'ZuOG4EnYSaytbMJrjujkE4m0G'
+csecret= '5kHVA3iQKUJ2xEwWi3OfnDnXePgr5qUrEoY8PljYChoOLARp5O'
+atoken= '99918081-CzzDcnKJPO8MR2OIcpHDEHoY9ti7wGAggcME3ke4h'
+asecret= 'NhyIvJLTygJwpHL9r0Ic2Gu2sPDl44dDvYtK5xfxMXWLS'
+
+auth = OAuthHandler(ckey,csecret)
+auth.set_access_token(atoken,asecret)
+api = API(auth, wait_on_rate_limit=True)
+
+cnxn = MySQLdb.connect(host = "localhost" ,user = "root" ,passwd= "harshit@123" ,db= "twitter_data")
+cursor = cnxn.cursor()
+cnxn.autocommit(True)
+
+cnxn1 = MySQLdb.connect(host = "localhost" ,user = "root" ,passwd= "harshit@123" ,db= "twitter_data")
+cursor1 = cnxn1.cursor()
+cnxn1.autocommit(True)
+
+class listener(StreamListener):
+
+    def __init__(self, api=None):
+
+        self.api = api or API()
+        self.n = 0
+        #self.i = 1
+        self.prefix = 'twitter_stream_file'
+        self.output = open(self.prefix + '@' + strftime("%y%m%d-%H%M%S") + '.json', 'w')
+        #self.i = self.i+1
+        self.counter = 1
+
+    def on_status(self, status):
+        try:
+
+            while self.n <= 20000000:
+
+                print self.counter
+                #teststr = status.text.encode('unicode_escape') #.strip().replace("\'", "\\'")
+                print str(unicodedata.normalize('NFKD', status.text).encode('utf8'))
+                #self.output.write("\n" + status.text.encode('utf8', 'ignore').strip().replace("'", r"\'").replace("\"", r"\"") + "\n")
+                print '\n'
+                self.n = self.n+1
+
+                usr_name = str(unicodedata.normalize('NFKD', status.user.screen_name).encode('utf8').encode('ascii').replace("\'", "\\'"))
+                usr_twitter_id = status.user.id_str
+
+                print "before"
+                tweet_decode = str(unicodedata.normalize('NFKD', status.text).encode('utf8').encode('latin-1', 'ignore').replace("\'", "\\'"))
+                mentions = status.entities[u'user_mentions']
+                hashtags = status.entities[u'hashtags']
+                print "after"
+
+                if mentions is not None and hashtags is not None:
+
+                    self.output.write("\n" + tweet_decode + "\n" + "***************************************")
+
+                    for i in range(len(hashtags)):
+
+                        for index in range(len(mentions)):
+                            query = """ insert into celebrity_tweets(tweet,user_name,user_twitter_id,users_mention_id,hashtags) values ('%s','%s','%s','%s','%s') """ % (tweet_decode,usr_name,usr_twitter_id,mentions[index]['id_str'],str(unicodedata.normalize('NFKD', hashtags[i]['text']).encode('utf8').encode('ascii').replace("\'", "\\'")))
+                            cursor1.execute(query)
+
+                    # if(len(mentions) == len(hashtags)):
+
+                        # for i in range(len(hashtags)):
+
+                            # for index in range(len(mentions)):
+                                # query = """ insert into celebrity_tweets(tweet,user_name,user_twitter_id,users_mention_id,hashtags) values ('%s','%s','%s','%s','%s') """ % (tweet_decode,usr_name,usr_twitter_id,mentions[index]['id_str'],unicodedata.normalize('NFKD', hashtags[i]['text']).encode('utf8').encode('ascii').replace("\'", "\\'"))
+                                # cursor1.execute(query)
+
+                    # elif(len(mentions) > len(hashtags)):
+
+                        # #for index in range(len(mentions)):
+
+                        # #if(hashtags[index] is not None):
+                        # hash_len = len(hashtags)
+                        # size = 0
+
+                        # while(hash_len > 0):
+                            # query = """ insert into celebrity_tweets(tweet,user_name,user_twitter_id,users_mention_id,hashtags) values ('%s','%s','%s','%s','%s') """ % (tweet_decode,usr_name,usr_twitter_id,mentions[size]['id_str'],unicodedata.normalize('NFKD', hashtags[size]['text']).encode('utf-8').encode('ascii').replace("\'", "\\'"))
+                            # cursor1.execute(query)
+                            # hash_len = hash_len - 1
+                            # size = size + 1
+
+                        # #mentions = mentions[hash_len:]
+
+                        # for index in range(len(mentions[hash_len:])):
+                            # query = """ insert into celebrity_tweets(tweet,user_name,user_twitter_id,users_mention_id,hashtags) values ('%s','%s','%s','%s','%s') """ % (tweet_decode,usr_name,usr_twitter_id,mentions[(hash_len + index)]['id_str'],"NULL")
+                            # cursor1.execute(query)
+
+                    # elif(len(mentions) < len(hashtags)):
+
+                        # #for index in range(len(hashtags)):
+
+                        # men_len = len(mentions)
+                        # size = 0
+
+                        # while(men_len > 0):
+                            # query = """ insert into celebrity_tweets(tweet,user_name,user_twitter_id,users_mention_id,hashtags) values ('%s','%s','%s','%s','%s') """ % (tweet_decode,usr_name,usr_twitter_id,mentions[size]['id_str'],unicodedata.normalize('NFKD', hashtags[size]['text']).encode('utf-8').encode('ascii').replace("\'", "\\'"))
+                            # cursor1.execute(query)
+                            # men_len = men_len - 1
+                            # size = size + 1
+
+                        # #hashtags = hashtags[men_len:]
+
+                        # for index in range(len(hashtags[men_len:])):
+                            # query = """ insert into celebrity_tweets(tweet,user_name,user_twitter_id,users_mention_id,hashtags) values ('%s','%s','%s','%s','%s') """ % (tweet_decode,usr_name,usr_twitter_id,"NULL",unicodedata.normalize('NFKD', hashtags[(men_len + index)]['text']).encode('utf-8').encode('ascii').replace("\'", "\\'"))
+                            # cursor1.execute(query)
+
+                    print "not none" + "\n"
+                    self.counter = self.counter+1
+                    return True
+
+                elif mentions is not None and hashtags is None:
+
+                    self.output.write("\n" + tweet_decode + "\n" + "***************************************")
+
+                    for index in range(len(mentions)):
+                        query = """ insert into celebrity_tweets(tweet,user_name,user_twitter_id,users_mention_id,hashtags) values ('%s','%s','%s','%s','%s') """ % (tweet_decode,usr_name,usr_twitter_id,mentions[index][u'id_str'],"NULL")
+                        cursor1.execute(query)
+
+                    print "not none" + "\n"
+                    self.counter = self.counter+1
+                    return True
+
+                elif mentions is None and hashtags is not None:
+
+                    self.output.write("\n" + tweet_decode + "\n" + "***************************************")
+
+                    for index in range(len(hashtags)):
+                        #hashtags[index].text = hashtags[index].text.encode('utf8', 'ignore').strip().replace("\'", r"\'")
+                        query = """ insert into celebrity_tweets(tweet,user_name,user_twitter_id,users_mention_id,hashtags) values ('%s','%s','%s','%s','%s') """ % (tweet_decode,usr_name,usr_twitter_id,"NULL",unicodedata.normalize('NFKD', hashtags[index]['text']).encode('utf8').encode('ascii').replace("\'", "\\'"))
+                        cursor1.execute(query)
+
+                    print "not none" + "\n"
+                    self.counter = self.counter+1
+                    return True
+
+                # else:
+
+                    # self.output.write("\n" + tweet_decode + "\n" + "***************************************")
+
+                    # query = """ insert into celebrity_tweets(tweet,user_name,user_twitter_id,users_mention_id,hashtags) values ('%s','%s','%s','%s','%s') """ % (tweet_decode,usr_name,usr_twitter_id,"NULL","NULL")
+                    # cursor1.execute(query)
+
+                    # print "none" + "\n"
+                    # self.counter = self.counter+1
+                    # return True
+
+            else:
+                return True
+                #self.output.close()
+
+                #if self.i <= 15:
+
+                    #self.output = open(self.prefix + '-' + str(self.i) + '@' + strftime("%y%m%d-%H%M%S") + '.json', 'w')
+                    #self.i = self.i+1
+                    #self.n = 0
+                    #return True
+
+                #else:
+
+                    #print "You Now have sufficient( ", str(self.counter), " ) Tweets. Please run again for more data."
+                    #return False
+
+        except Exception, e:
+
+            print 'Error in Status : ', self.counter, str(e) + "\n"
+            self.counter = self.counter+1
+            return True
+
+    def on_error(self, status):
+
+        print 'Error in your Syntax : ', self.counter, str(status) + "\n"
+        #self.counter = self.counter+1
+        return False
+
+#friends_ids = ['586671909','2567764916','17449887','2591915942']
+#friends_ids_bac = ['14924965','297856522','3563911','44963489']
+
+# friends_ids = []
+# friends_ids_bac = []
+#friends_name = []
+#save_friends_data = open('friends_ids.txt', 'a')
+
+# #save_friends_data.write("*********************  START  *********************\n")
+# #save_friends_data.write("\nSrBachchan Friends\n")
+
+# #for user in Cursor(api.friends, screen_name="SrBachchan").items():
+
+    # #try:
+        # #if user.verified==True :
+            # #friends_ids_bac.append(user.id_str)
+            # #friends_name.append(user.screen_name)
+            # #save_friends_data.write("\n" + user.id_str + "\t" + user.screen_name + "\n")
+            # #query = """ insert into srbachchan_friends(user_id,user_name) values ('%s','%s') """ % (user.id_str,user.screen_name)
+            # #cursor.execute(query)
+
+        # #else:
+            # #continue
+
+    # #except TweepError:
+        # #time.sleep(1)
+        # #continue
+
+#save_friends_data.write("\n***************************************************\n")
+
+# #query_check = """show tables from twitter_data"""
+# #cursor.execute(query_check)
+# #results = cursor.fetchall()
+
+# #query_check1 = """select user_name from srbachchan_friends"""
+# #cursor.execute(query_check1)
+# #results1 = cursor.fetchall()
+
+# #for index in range(len(friends_ids_bac)):
+# #for row1 in results1:
+
+    # #name = (row1+"_friends").lower()
+
+    # #z=0
+
+    # #for row in results:
+
+        # #if(cmp(name,row[0]) == 0):
+            # #z = z+1
+            # #break
+
+        # #else:
+            # #continue
+
+    # #if(z==0):
+
+
+# # try:
+
+    # # row1 = "iamsrk"
+
+    # # save_friends_data.write("\n" + row1 + "Friends \n")
+
+    # # query_make = """ CREATE TABLE """+row1+"""_friends(id INT NOT NULL AUTO_INCREMENT,user_id VARCHAR(192) NULL,user_name VARCHAR(192) NULL,PRIMARY KEY ( id )) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 DEFAULT COLLATE utf8mb4_unicode_ci """
+    # # cursor.execute(query_make)
+
+    # # for user in Cursor(api.friends, screen_name=row1).items():
+
+        # # try:
+            # # if user.verified==True:
+                # # friends_ids.append(user.id_str)
+                # # save_friends_data.write("\n" + user.id_str + "\t" + user.screen_name + "\n")
+                # # query = """ insert into """+row1+"""_friends(user_id,user_name) values ('%s','%s') """ % (user.id_str,user.screen_name)
+                # # cursor.execute(query)
+
+            # # else:
+                # # continue
+
+        # # except TweepError:
+            # # time.sleep(1)
+            # # continue
+
+    # # save_friends_data.write("\n***************************************************\n")
+
+# # except Exception, e:
+    # # print traceback.format_exc()
+
+# try:
+
+    # row2 = "pmoindia"
+
+    # save_friends_data.write("\n" + row2 + "Friends \n")
+
+    # #query_make = """ CREATE TABLE """+row2+"""_friends(id INT NOT NULL AUTO_INCREMENT,user_id VARCHAR(192) NULL,user_name VARCHAR(192) NULL,PRIMARY KEY ( id )) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 DEFAULT COLLATE utf8mb4_unicode_ci """
+    # #cursor.execute(query_make)
+
+    # for user in Cursor(api.friends, screen_name=row2).items():
+
+        # try:
+            # if user.verified==True:
+                # #friends_ids.append(user.id_str)
+                # save_friends_data.write("\n" + user.id_str + "\t" + user.screen_name + "\n")
+                # query = """ insert into primeminister_friends(user_id,user_name) values ('%s','%s') """ % (user.id_str,user.screen_name)
+                # cursor.execute(query)
+
+            # else:
+                # continue
+
+        # except TweepError:
+            # time.sleep(1)
+            # continue
+
+    # save_friends_data.write("\n***************************************************\n")
+
+# except Exception, e:
+    # print traceback.format_exc()
+
+# sys.exit(0)
+
+# # save_friends_data.write("\n***************************************************\n")
+
+# # save_friends_data.write("\nSrBachchan\n")
+
+# # user = api.get_user("SrBachchan")
+# # #friends_ids_bac.append(user.id_str)
+# # save_friends_data.write("\n" + user.id_str + "\t" + user.screen_name + "\n")
+# # query_bac = """ insert into srbachchan_details(user_id,user_name) values ('%s','%s') """ % (user.id_str,user.screen_name)
+# # cursor.execute(query_bac)
+
+# #save_friends_data.write("\n***************************************************\n")
+
+# save_friends_data.write("\nMSDhoni\n")
+
+# user1 = api.get_user("msdhoni")
+# #friends_ids_bac.append(user1.id_str)
+# save_friends_data.write("\n" + user1.id_str + "\t" + user1.screen_name + "\n")
+# query_bac1 = """ insert into msdhoni_details(user_id,user_name) values ('%s','%s') """ % (user1.id_str,user1.screen_name)
+# cursor.execute(query_bac1)
+
+# save_friends_data.write("\n********************  THE END  ********************\n")
+# save_friends_data.close()
+
+# query_check = """show tables from twitter_data"""
+# cursor.execute(query_check)
+# results = cursor.fetchall()
+
+# for row in results:
+
+    # if row[0] != "celebrity_tweets":
+        # query_check1 = """delete from """+row[0]+""" where user_name in ('satyanadella','medium','microsoft','google','youtube')"""
+        # #query_check2 = """delete from celebrity_tweets where user_name in ('SanderRegter','sathishmechy1') OR users_mention_id in (38147187,133880286)  """
+        # cursor.execute(query_check1)
+        # #cursor.execute(query_check2)
+        # results1 = cursor.fetchall()
+        # print len(results1)
+
+# sys.exit(0)
+
+friends_ids = []
+#friends_values = {}
+# #friends_ids_bac = []
+
+query_check = """show tables from twitter_data"""
+cursor.execute(query_check)
+results = cursor.fetchall()
+
+for row in results:
+
+    if row[0] not in ("celebrity_tweets","celebrities",'celebrity_common_mention_tweets','celebrity_specific_distinct_hashtags_count','celebrity_hashtags_common','celebrity_users_common','celebrity_hashtags_common','celebrity_number_unique_users','celebrity_specific_hashtags_count'):
+        query_check1 = """select user_id from """+row[0]+""""""
+        cursor.execute(query_check1)
+        results1 = cursor.fetchall()
+
+        for row1 in results1:
+            friends_ids.append(row1[0])
+            #friends_values.update({row1[0]:row1[1]})
+
+friends_ids = set(friends_ids)
+
+# friends_values = set(((key,value) for key,value in friends_values.iteritems()))
+# friends_values = dict(friends_values)
+
+# for key,value in friends_values.iteritems():
+    # query_check2 = """ insert into celebrities(celebrity_twitter_id,celebrity_twitter_name) values ('%s','%s') """ % (key,value)
+    # cursor.execute(query_check2)
+
+#friends_ids_bac = set(friends_ids_bac)
+#friends_ids = [elem for elem in friends_ids if elem not in friends]
+
+twitterStream = Stream(auth, listener())
+twitterStream.filter(follow=friends_ids)
+self.output.close()
